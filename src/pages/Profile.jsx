@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import API from "../api/axios";
 import { Link, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -36,8 +36,7 @@ export default function Profile() {
   const [followersCount, setFollowersCount] = useState(0);
   const [activeTab, setActiveTab] = useState("posts");
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = useCallback(async () => {
     try {
       const [{ data: u }, { data: p }] = await Promise.all([
         API.get(`/user/${id}`),
@@ -60,12 +59,15 @@ export default function Profile() {
       console.error(err);
       toast.error("Failed to load profile");
     }
-    setLoading(false);
-  };
+  }, [id, authUser]);
 
   useEffect(() => {
-    fetchData();
-  }, [id]);
+    const loadData = async () => {
+      await fetchData();
+      setLoading(false);
+    };
+    loadData();
+  }, [fetchData]);
 
   if (loading) return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 pt-20">
@@ -108,7 +110,7 @@ export default function Profile() {
       const { data } = await API.get(`/user/followers/${id}`);
       setFollowersList(data);
       setFollowersModal(true);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load followers");
     }
   };
@@ -118,7 +120,7 @@ export default function Profile() {
       const { data } = await API.get(`/user/following/${id}`);
       setFollowingList(data);
       setFollowingModal(true);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load following");
     }
   };
@@ -352,7 +354,7 @@ export default function Profile() {
               { id: "posts", label: "Posts", icon: AiOutlineFileText, count: posts.length },
               { id: "projects", label: "Projects", icon: HiSparkles, count: 0 },
               { id: "activity", label: "Activity", icon: AiOutlineUser, count: 0 }
-            ].map(({ id, label, icon: Icon, count }) => (
+            ].map(({ id, label, icon, count }) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
@@ -362,7 +364,7 @@ export default function Profile() {
                     : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
                 }`}
               >
-                <Icon className="w-5 h-5" />
+                {React.createElement(icon, { className: "w-5 h-5" })}
                 {label}
                 {count > 0 && (
                   <span className={`px-2 py-1 rounded-full text-xs ${

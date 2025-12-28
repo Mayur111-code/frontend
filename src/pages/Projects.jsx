@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import API from "../api/axios";
 import ProjectCard from "../components/ProjectCard";
 import CreateProjectModal from "../components/CreateProjectModal";
@@ -9,19 +9,22 @@ export default function Projects() {
   const [loading, setLoading] = useState(true);
   const [openCreate, setOpenCreate] = useState(false);
 
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     try {
       const { data } = await API.get("/projects/all");
       setProjects(data);
     } catch (err) {
       console.log(err);
     }
-    setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
-    loadProjects();
-  }, []);
+    const fetchProjects = async () => {
+      await loadProjects();
+      setLoading(false);
+    };
+    fetchProjects();
+  }, [loadProjects]);
 
   if (loading)
     return (

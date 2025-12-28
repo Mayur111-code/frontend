@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import API from "../api/axios";
 import { useDispatch } from "react-redux";
 import { setUser } from "../redux/userSlice";
@@ -16,9 +16,9 @@ export default function Login() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
+  const handleLogin = useCallback(async (e) => {
     e.preventDefault();
-    
+
     if (!email.trim() || !password.trim()) {
       toast.error("Please fill in all fields");
       return;
@@ -31,57 +31,74 @@ export default function Login() {
 
       if (data.token) {
         dispatch(setUser({ user: data.user, token: data.token }));
-        
+
         // Store remember me preference
         if (rememberMe) {
           localStorage.setItem("rememberMe", "true");
         }
-        
+
         // Success toast
         toast.success(`Welcome back, ${data.user.name}! 🎉`);
-        
+
         navigate("/");
       }
     } catch (err) {
-      console.log(err);
+      console.error(err);
       toast.error(err?.response?.data?.message || "Invalid credentials. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
-  };
+  }, [email, password, rememberMe, dispatch, navigate]);
 
-  const handleDemoLogin = (role) => {
-    const demoAccounts = {
-      developer: { email: "demo@dev.com", password: "demo123" },
-      designer: { email: "demo@designer.com", password: "demo123" },
-      founder: { email: "demo@founder.com", password: "demo123" }
-    };
-    
-    setEmail(demoAccounts[role].email);
-    setPassword(demoAccounts[role].password);
-    toast.info(`Demo ${role} account loaded! Click Login to continue.`);
-  };
+  const handleDemoLogin = useCallback(async (role) => {
+    setLoading(true);
+    try {
+      const demoCredentials = {
+        developer: { email: "dev@example.com", password: "dev123" },
+        designer: { email: "designer@example.com", password: "designer123" },
+        founder: { email: "founder@example.com", password: "founder123" }
+      };
+
+      const { data } = await API.post("/auth/login", demoCredentials[role]);
+
+      if (data.token) {
+        dispatch(setUser({ user: data.user, token: data.token }));
+        toast.success(`Welcome back, ${data.user.name}! 🎉`);
+        navigate("/");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Demo login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch, navigate]);
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 px-4 py-8 relative overflow-hidden">
-      
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-32 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-        <div className="absolute -bottom-40 -left-32 w-80 h-80 bg-yellow-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute top-40 left-1/2 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
-      </div>
-
-      {/* Main Card - Fixed Height */}
-      <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-8 max-w-md w-full transform transition-all duration-500 hover:shadow-2xl hover:bg-white/15 relative z-10 max-h-[85vh] overflow-hidden flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
+      <style>{`
+        .overflow-y-auto::-webkit-scrollbar {
+          width: 6px;
+        }
         
-        {/* Header with Logo */}
-        <div className="text-center mb-8 flex-shrink-0">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-2xl">I</span>
-            </div>
-          </div>
+        .overflow-y-auto::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+        }
+        
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.3);
+          border-radius: 10px;
+        }
+        
+        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.5);
+        }
+      `}</style>
+
+      <div className="w-full max-w-md bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
+        {/* Header */}
+        <div className="text-center py-8 px-6 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-b border-white/10">
           <h2 className="text-3xl font-bold text-white mb-2">
             Welcome Back
           </h2>
@@ -89,7 +106,7 @@ export default function Login() {
         </div>
 
         {/* Demo Accounts Quick Access */}
-        <div className="mb-6 flex-shrink-0">
+        <div className="mb-6 flex-shrink-0 px-6 pt-6">
           <p className="text-gray-400 text-sm text-center mb-3">Try demo accounts:</p>
           <div className="flex gap-2 justify-center">
             {[
@@ -109,7 +126,7 @@ export default function Login() {
         </div>
 
         {/* Scrollable Form Content */}
-        <div className="flex-1 overflow-y-auto pr-2">
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
           <form onSubmit={handleLogin} className="space-y-5">
 
             {/* Email Field */}
@@ -188,25 +205,26 @@ export default function Login() {
                 Forgot password?
               </Link>
             </div>
-
             {/* Login Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] shadow-xl hover:shadow-2xl relative overflow-hidden group mt-4"
-            >
-              <div className="relative z-10 flex items-center justify-center text-sm">
-                {loading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Signing In...
-                  </>
-                ) : (
-                  "Login to Your Account"
-                )}
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            </button>
+            <div className="mt-4">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] shadow-xl hover:shadow-2xl relative overflow-hidden group"
+              >
+                <div className="relative z-10 flex items-center justify-center text-sm">
+                  {loading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Signing In...
+                    </>
+                  ) : (
+                    "Login to Your Account"
+                  )}
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </button>
+            </div>
           </form>
 
           {/* Social Login Divider */}
@@ -252,44 +270,6 @@ export default function Login() {
           </p>
         </div>
       </div>
-
-      {/* Add custom animations */}
-      <style jsx>{`
-        @keyframes blob {
-          0% { transform: translate(0px, 0px) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-          100% { transform: translate(0px, 0px) scale(1); }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-        
-        /* Custom scrollbar for form */
-        .overflow-y-auto::-webkit-scrollbar {
-          width: 4px;
-        }
-        
-        .overflow-y-auto::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 10px;
-        }
-        
-        .overflow-y-auto::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.3);
-          border-radius: 10px;
-        }
-        
-        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.5);
-        }
-      `}</style>
     </div>
   );
 }

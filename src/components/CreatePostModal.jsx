@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import API from "../api/axios";
 import { AiOutlineClose, AiOutlinePicture, AiOutlineVideoCamera } from "react-icons/ai";
+import { toast } from "react-toastify";
+import Button from "./Button";
 
 export default function CreatePostModal({ close, refresh }) {
     const [content, setContent] = useState("");
@@ -8,15 +10,39 @@ export default function CreatePostModal({ close, refresh }) {
     const [preview, setPreview] = useState(null);
     const [loading, setLoading] = useState(false);
 
-    const handleFile = (e) => {
+    // Cleanup object URL on unmount or when preview changes
+    useEffect(() => {
+        return () => {
+            if (preview) {
+                URL.revokeObjectURL(preview);
+            }
+        };
+    }, [preview]);
+
+    const handleFile = useCallback((e) => {
         const f = e.target.files[0];
         if (!f) return;
 
+        // Revoke previous URL
+        if (preview) {
+            URL.revokeObjectURL(preview);
+        }
+
         setFile(f);
         setPreview(URL.createObjectURL(f));
-    };
+    }, [preview]);
 
-    const createPost = async () => {
+    const removeFile = useCallback(() => {
+        if (preview) {
+            URL.revokeObjectURL(preview);
+        }
+        setFile(null);
+        setPreview(null);
+    }, [preview]);
+
+    const createPost = useCallback(async () => {
+        if (loading || (!content.trim() && !file)) return;
+
         try {
             setLoading(true);
             let fileUrl = null;
@@ -37,21 +63,24 @@ export default function CreatePostModal({ close, refresh }) {
                 video: fileUrl,
             });
 
-            setLoading(false);
+            toast.success("Post created successfully!");
             close();
             refresh();
 
         } catch (err) {
-            console.log(err);
-            alert("Error creating post");
+            console.error(err);
+            toast.error(err?.response?.data?.message || "Error creating post");
+        } finally {
             setLoading(false);
         }
-    };
+    }, [loading, content, file, close, refresh]);
+
+    const handleContentChange = useCallback((e) => setContent(e.target.value), []);
 
     return (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 px-4 py-8">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg transform transition-all duration-300">
-                
+
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-200">
                     <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -69,7 +98,7 @@ export default function CreatePostModal({ close, refresh }) {
                 <div className="p-6">
                     <textarea
                         value={content}
-                        onChange={(e) => setContent(e.target.value)}
+                        onChange={handleContentChange}
                         className="w-full border border-gray-300 rounded-xl px-4 py-3 h-32 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200 resize-none"
                         placeholder="What's on your mind? Share your thoughts..."
                     />
@@ -86,7 +115,7 @@ export default function CreatePostModal({ close, refresh }) {
                                 className="hidden"
                             />
                         </label>
-                        
+
                         <label className="flex items-center gap-2 px-4 py-2.5 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 cursor-pointer transition-all duration-200 border border-purple-200">
                             <AiOutlineVideoCamera size={20} />
                             <span>Video</span>
@@ -104,23 +133,20 @@ export default function CreatePostModal({ close, refresh }) {
                         <div className="mt-4 relative">
                             <div className="relative group">
                                 {file && file.type.startsWith("video/") ? (
-                                    <video 
-                                        src={preview} 
-                                        controls 
+                                    <video
+                                        src={preview}
+                                        controls
                                         className="rounded-xl w-full max-h-80 object-cover shadow-lg"
                                     />
                                 ) : (
-                                    <img 
-                                        src={preview} 
+                                    <img
+                                        src={preview}
                                         className="rounded-xl w-full max-h-80 object-cover shadow-lg"
-                                        alt="Post preview" 
+                                        alt="Post preview"
                                     />
                                 )}
                                 <button
-                                    onClick={() => {
-                                        setFile(null);
-                                        setPreview(null);
-                                    }}
+                                    onClick={removeFile}
                                     className="absolute top-3 right-3 p-2 bg-black/50 text-white rounded-full hover:bg-black/70 transition-all duration-200 opacity-0 group-hover:opacity-100"
                                 >
                                     <AiOutlineClose size={16} />

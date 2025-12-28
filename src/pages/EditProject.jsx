@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API from "../api/axios";
 import { toast } from "react-toastify";
@@ -17,7 +17,7 @@ export default function EditProject() {
   const [preview, setPreview] = useState(null); // preview UI
 
   // Load existing project
-  const fetchProject = async () => {
+  const fetchProject = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await API.get(`/projects/${id}`);
@@ -33,11 +33,11 @@ export default function EditProject() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchProject();
-  }, []);
+  }, [fetchProject]);
 
   const handleFile = (e) => {
     const f = e.target.files[0];

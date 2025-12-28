@@ -1,32 +1,44 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Suspense, lazy } from "react";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Home from "./pages/Home";
 import ProtectedRoute from "./utils/ProtectedRoute";
 import Navbar from "./components/Navbar";
-import Profile from "./pages/Profile";
-import Notifications from "./pages/Notifications";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import TechNewsFeed from "./pages/Explore";
-import Projects from "./pages/Projects";
-import ProjectDetails from "./pages/ProjectDetails";
-import EditProject from "./pages/EditProject";
+
+// Lazy load pages
+const Home = lazy(() => import("./pages/Home"));
+const TechNewsFeed = lazy(() => import("./pages/Explore"));
+const Projects = lazy(() => import("./pages/Projects"));
+const ProjectDetails = lazy(() => import("./pages/ProjectDetails"));
+const EditProject = lazy(() => import("./pages/EditProject"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+
+// Loading component
+const LoadingSpinner = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+  </div>
+);
 
 function App() {
   return (
-    <BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
 
-      {/* GLOBAL TOAST */}
-      <ToastContainer
-        position="top-right"
-        autoClose={1500}
-        pauseOnHover={false}
-        draggable
-        theme="light"
-      />
+        {/* GLOBAL TOAST */}
+        <ToastContainer
+          position="top-right"
+          autoClose={1500}
+          pauseOnHover={false}
+          draggable
+          theme="light"
+        />
 
-      <Routes>
+        <Routes>
 
         {/* PUBLIC ROUTES */}
         <Route path="/login" element={<Login />} />
@@ -38,7 +50,9 @@ function App() {
           element={
             <ProtectedRoute>
               <Navbar />
-              <Home />
+              <Suspense fallback={<LoadingSpinner />}>
+                <Home />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -49,7 +63,9 @@ function App() {
           element={
             <ProtectedRoute>
               <Navbar />
-              <Notifications />
+              <Suspense fallback={<LoadingSpinner />}>
+                <Notifications />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -60,7 +76,9 @@ function App() {
           element={
             <ProtectedRoute>
               <Navbar />
-              <Profile />
+              <Suspense fallback={<LoadingSpinner />}>
+                <Profile />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -74,7 +92,9 @@ function App() {
           element={
             <ProtectedRoute>
               <Navbar />
-              <Projects />
+              <Suspense fallback={<LoadingSpinner />}>
+                <Projects />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -85,28 +105,31 @@ function App() {
           element={
             <ProtectedRoute>
               <Navbar />
-              <ProjectDetails />
+              <Suspense fallback={<LoadingSpinner />}>
+                <ProjectDetails />
+              </Suspense>
             </ProtectedRoute>
           }
         />
 
-
         <Route
-  path="/projects/:id/edit"
-  element={
-    <ProtectedRoute>
-      <Navbar />
-      <EditProject />
-    </ProtectedRoute>
-  }
-/>
-
+          path="/projects/:id/edit"
+          element={
+            <ProtectedRoute>
+              <Navbar />
+              <Suspense fallback={<LoadingSpinner />}>
+                <EditProject />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
 
       </Routes>
 
 
 
     </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import API from "../api/axios";
 import timeAgo from "../utils/timeAgo";
 import { Link } from "react-router-dom";
@@ -9,23 +9,22 @@ export default function Notifications() {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     try {
       const { data } = await API.get("/notifications/my");
       setList(data);
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
       toast.error("Failed to load notifications");
     }
-    setLoading(false);
-  };
+  }, []);
 
   const markAll = async () => {
     try {
       await API.put("/notifications/read-all");
       loadNotifications();
       toast.success("All notifications marked as read");
-    } catch (err) {
+    } catch {
       toast.error("Failed to mark all as read");
     }
   };
@@ -35,7 +34,7 @@ export default function Notifications() {
       await API.put(`/notifications/read/${id}`);
       loadNotifications();
       toast.info("Notification marked as read");
-    } catch (err) {
+    } catch {
       toast.error("Failed to mark as read");
     }
   };
@@ -45,15 +44,19 @@ export default function Notifications() {
       await API.delete(`/notifications/delete/${id}`);
       loadNotifications();
       toast.success("Notification deleted");
-    } catch (err) {
-      console.error("Delete notification error:", err);
+    } catch {
+      console.error("Delete notification error");
       toast.error("Failed to delete notification");
     }
   };
 
   useEffect(() => {
-    loadNotifications();
-  }, []);
+    const fetchData = async () => {
+      await loadNotifications();
+      setLoading(false);
+    };
+    fetchData();
+  }, [loadNotifications]);
 
   if (loading)
     return (
